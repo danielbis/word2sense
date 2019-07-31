@@ -197,45 +197,6 @@ class DataLoader:
 
         print("Document %s was converted to %s and exported" % (ids_or_senses,doc_id))
 
-    def export_vocab(self, dicts_dir, write_pickle=True):
-
-        dict_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "vocab", "index2word"), "w")
-        wr = csv.writer(dict_file, dialect='excel')
-        for key, value in self.index2word.items():
-            wr.writerow((key, value))
-
-        counter_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "vocab", "word2count"), "w")
-        wr = csv.writer(counter_file, dialect='excel')
-        wr.writerow(("UniqueCount", self.n_words))
-        for key in self.word2count:
-            wr.writerow((key, self.word2count[key]))
-
-        if write_pickle:
-            dict_file = open("%s/%s/pickles/%s.pickle" %(dicts_dir, "vocab", "index2word"), "w")
-            pickle.dump(self.index2word, dict_file)
-            counter_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "vocab", "word2count"), "w")
-            pickle.dump(self.n_words, counter_file)
-            pickle.dump(self.word2count, counter_file)
-
-    def export_sense(self, dicts_dir, write_pickle=True):
-
-        dict_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "sense_vocab", "index2sense"), "w")
-        wr = csv.writer(dict_file, dialect='excel')
-        for key, value in self.index2on_sense.items():
-            wr.writerow((key, value))
-
-        counter_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "sense_vocab", "sense2count"), "w")
-        wr = csv.writer(counter_file, dialect='excel')
-        wr.writerow(("UniqueCount", self.n_senses))
-        for key in self.on_sense2count:
-            wr.writerow((key, self.on_sense2count[key]))
-
-        if write_pickle:
-            dict_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "sense_vocab", "index2sense"), "w")
-            pickle.dump(self.index2on_sense, dict_file)
-            counter_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "sense_vocab", "sense2count"), "w")
-            pickle.dump(self.n_senses, counter_file)
-            pickle.dump(self.on_sense2count, counter_file)
 
     def build_corpus(self):
         self.ensure_dir()
@@ -256,9 +217,51 @@ class DataLoader:
             self.export_doc(self.corpus_dir, document_id, doc_ids, "ids")  # saves a list of list (sentences) of ids
             self.export_doc(self.corpus_dir, document_id, doc_senses, "senses") # saves a list of list (sentences) of senses
 
+        export_vocab(self.index2word, self.n_words, self.word2count, self.corpus_dir)
+        export_sense(self.index2on_sense, self.n_senses, self.on_sense2count, self.corpus_dir)
 
-        self.export_vocab(self.corpus_dir)
-        self.export_sense(self.corpus_dir)
+
+def export_vocab(index2word, n_words,word2count, dicts_dir, write_pickle=True, write_count=True):
+
+    dict_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "vocab", "index2word"), "w")
+    wr = csv.writer(dict_file, dialect='excel')
+    for key, value in index2word.items():
+        wr.writerow((key, value))
+
+    if write_count:
+        counter_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "vocab", "word2count"), "w")
+        wr = csv.writer(counter_file, dialect='excel')
+        wr.writerow(("UniqueCount", n_words))
+        for key in word2count:
+            wr.writerow((key, word2count[key]))
+
+    if write_pickle:
+        dict_file = open("%s/%s/pickles/%s.pickle" %(dicts_dir, "vocab", "index2word"), "w")
+        pickle.dump(index2word, dict_file)
+        if write_count:
+            counter_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "vocab", "word2count"), "w")
+            pickle.dump(n_words, counter_file)
+            pickle.dump(word2count, counter_file)
+
+
+def export_sense(index2on_sense, n_senses, on_sense2count, dicts_dir, write_pickle=True):
+    dict_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "sense_vocab", "index2sense"), "w")
+    wr = csv.writer(dict_file, dialect='excel')
+    for key, value in index2on_sense.items():
+        wr.writerow((key, value))
+
+    counter_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "sense_vocab", "sense2count"), "w")
+    wr = csv.writer(counter_file, dialect='excel')
+    wr.writerow(("UniqueCount", n_senses))
+    for key in on_sense2count:
+        wr.writerow((key, on_sense2count[key]))
+
+    if write_pickle:
+        dict_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "sense_vocab", "index2sense"), "w")
+        pickle.dump(index2on_sense, dict_file)
+        counter_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "sense_vocab", "sense2count"), "w")
+        pickle.dump(n_senses, counter_file)
+        pickle.dump(on_sense2count, counter_file)
 
 
 def isvalid_wnsense(token):

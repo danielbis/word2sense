@@ -10,6 +10,31 @@ antonyms, and related words in general in comparison to WN?
     = sum(wn.lemma_names()) / sum.(onto_notes.lemma_names())
 """
 
+####################### HELPERS #######################################################################################
+CORPUS_DIR = "corpus"
+
+
+def export_dicts_helper(mappings, dicts_dir,idx2token_path, token2idx_path, type, write_pickle=True):
+    index2sense = dict()
+
+    dict_file_1 = open("%s/csv_format/%s.csv" % (dicts_dir+type, token2idx_path), "w")
+    dict_file_2 = open("%s/csv_format/%s.csv" % (dicts_dir+type, idx2token_path), "w")
+    wr_1 = csv.writer(dict_file_1, dialect='excel')
+    wr_2 = csv.writer(dict_file_2, dialect='excel')
+
+    for key, value in mappings.items():
+        wr_1.writerow((key, value))  # sense2index
+        wr_2.writerow((value, key))  # index2sense
+        index2sense[value] = key
+
+    if write_pickle:
+        dict_file_1 = open("%s/%s/pickles/%s.pickle" % (dicts_dir+type, token2idx_path), "w")
+        dict_file_2 = open("%s/%s/pickles/%s.pickle" % (dicts_dir+type, idx2token_path), "w")
+
+        pickle.dump(mappings, dict_file_1)
+        pickle.dump(index2sense, dict_file_2)
+
+
 
 def load_sense_mappings(path):
     mappings = {}
@@ -55,15 +80,35 @@ def load_vocab(path):
 
     return mappings
 
+#######################################################################################################################
+
 
 class OnWnMapper:
-    def __init__(self, path_to_map, path_to_vocab):
+    def __init__(self, path_to_map, path_to_vocab, path_to_index2sense):
+        """
+        Important Note: During processing new words are added to on_senses and vocabulary,
+        therefore they need to be exported again.
+        :param path_to_map: ontonotes sense to wordnet sense mappings
+        :param path_to_vocab: index2word mapping [.csv]
+        :param path_to_index2sense: index2sense mapping [.pickle]
+        """
+        # sense mappings
         self.on2wn = load_sense_mappings_pickle(path_to_map)
+        self.index2sense = load_sense_mappings_pickle(path_to_index2sense)
+        self.sense2index = dict()
+        for key, value in self.index2sense.items():
+            self.sense2index[value.replace("-", ".")] = key
+
+        self.n_onsenses = len(self.sense2index)
+        # get rid of that, no longer needed, save memory
+        del self.index2sense
+
+        # Vocab
         self.word2index = load_vocab(path_to_vocab)
         self.n_words = len(self.word2index)
-
         # test
         print("Sense")
+        print(self.sense2index["open.v.2"])
         print(self.on2wn["elaborate.v.1"])
         print(self.on2wn["elaborate.v.1"][0])
         print("Vocab:")
@@ -79,6 +124,17 @@ class OnWnMapper:
         self.word2index[word] = self.n_words
         self.n_words += 1
         return old_n_words
+
+    def add_onsense(self, on_sense):
+        """
+        Helper for building the dictionary
+        :param word: string
+        :return: int(id) for the word
+        """
+        old_onsenses = self.n_onsenses
+        self.sense2index[on_sense] = self.n_onsenses
+        self.n_onsenses += 1
+        return old_onsenses
 
 
 
@@ -252,11 +308,14 @@ class OnWnMapper:
         return on2related, on2antonym
 
     def build_export_related(self, path):
-
+        MAX_RELATED = 128
+        MAX_ANTONYMS = 8
         on2related = dict()
         on2antonyms = dict()
         with_antonyms = 0
         without_antonyms = 0
+        max_related = 0
+        max_antonyms = 0
         related_file = open(path + ".csv", "w")
         pickle_file = open(path + ".pickle", "w")
 
@@ -269,15 +328,27 @@ class OnWnMapper:
         for key, value in self.on2wn.items():
             _related, _antonyms = self.get_related(key)
             # csv
-            vocab_writer.writerow([key] + [_related])
-            antonyms_writer.writerow([key] + [_antonyms])
-            # to dump pickle
-            on2related[key] = _related
-            on2antonyms[key] = _antonyms
+            if key in self.sense2index:
+                vocab_writer.writerow([self.sense2index[key]] + [_related])
+                antonyms_writer.writerow([self.sense2index[key]] + [_antonyms])
+            else:
+                vocab_writer.writerow([self.add_onsense(key)] + [_related])
+                antonyms_writer.writerow([self.add_onsense(key)] + [_antonyms])
+
             if len(_antonyms) > 0:
                 with_antonyms +=1
             else:
                 without_antonyms += 1
+
+            if len(_related) > max_related:
+                max_related = len(_related)
+            if len(_antonyms) > max_antonyms:
+                max_antonyms = len(_antonyms)
+            # to dump pickle, add paddings
+            on2related[self.sense2index[key]] = _related + [0 for i in range(MAX_RELATED-len(_related))]
+
+            on2antonyms[self.sense2index[key]] = _antonyms + [0 for i in range(MAX_ANTONYMS-len(_antonyms))]
+
 
         pickle.dump(on2related, pickle_file)
         pickle.dump(on2antonyms, antonyms_pickle)
@@ -285,6 +356,17 @@ class OnWnMapper:
         print("Exported on_sense to related mappings.")
         print("with antonyms: ", with_antonyms)
         print("without antonyms: ", without_antonyms)
+        print("Max related length: ", max_related)
+        print("Max antonyms length: ", max_antonyms)
+
+    def export_updated_dicts(self, _cropus_dir):
+
+        export_dicts_helper(mappings=self.sense2index, dicts_dir=CORPUS_DIR, type="sense_vocab",
+                           idx2token_path="index2sense", token2idx_path="sense2index" )
+        export_dicts_helper(mappings=self.word2index, dicts_dir=CORPUS_DIR, type="vocab",
+                           idx2token_path="index2word", token2idx_path="word2index")
+
+
 
 
 if __name__ == '__main__':
@@ -295,7 +377,9 @@ if __name__ == '__main__':
     PATH_ON2WN_PICKLE = \
         "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/sense_vocab/pickles/on2wn.pickle"
     PATH_RELATED = "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/related/relations"
-    mapperObject = OnWnMapper(PATH_ON2WN_PICKLE, PATH_VOCAB)
+    PATH_INDEX2SENSE = \
+        "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/sense_vocab/pickles/index2sense.pickle"
+    mapperObject = OnWnMapper(PATH_ON2WN_PICKLE, PATH_VOCAB, PATH_INDEX2SENSE)
     mapperObject.build_export_related(PATH_RELATED)
 
 

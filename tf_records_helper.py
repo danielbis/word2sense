@@ -60,8 +60,8 @@ class RecordPrep:
             context_features=context_features,
             sequence_features=sequence_features
         )
-        return {"seq_1": sequence_parsed["vocab_ids"], "length_1": context_parsed["length_1"],
-                "seq_2": sequence_parsed["sense_ids"], "length_2": context_parsed["length_2"]}
+        return {"vocab_ids": sequence_parsed["vocab_ids"], "length_1": context_parsed["length_1"],
+                "sense_ids": sequence_parsed["sense_ids"], "length_2": context_parsed["length_2"]}
 
     def build_tfrecords(self):
 
