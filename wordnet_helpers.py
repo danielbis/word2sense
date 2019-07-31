@@ -210,49 +210,81 @@ class OnWnMapper:
         """
 
         :param on_sense:
-        :return: list [ids of related words]
+        :return: lists: [ids of related words], [ids of antonyms]
         """
         wn_senses = self.on2wn_format(on_sense)
         _related = []
+        _antonyms = []
 
         _related += self.get_synonyms(wn_senses)
-        _related += self.get_antonyms(wn_senses)
         _related += self.get_hypernyms(wn_senses)
         _related += self.get_synonyms(wn_senses)
 
+        _antonyms += self.get_antonyms(wn_senses)
+
         related = []
+        antonyms = []
+
         for lemma in _related:
             if lemma in self.word2index:
                 related.append(self.word2index[lemma])
             else:
                 related.append(self.add_word(lemma))
 
+        for lemma in _antonyms:
+            if lemma in self.word2index:
+                antonyms.append(self.word2index[lemma])
+            else:
+                antonyms.append(self.add_word(lemma))
+
         del _related  # free memory? It should go out of scope anyway...
-        return related
+        return related, antonyms
 
     def build_related(self):
 
         on2related = dict()
+        on2antonym = dict()
         for key, value in self.on2wn.items():
-            on2related[key] = self.get_related(key)
+            positively_related, antonyms = self.get_related(key)
+            on2related[key] = positively_related
+            on2antonym[key] = antonyms
 
-        return on2related
+        return on2related, on2antonym
 
     def build_export_related(self, path):
 
         on2related = dict()
+        on2antonyms = dict()
+        with_antonyms = 0
+        without_antonyms = 0
         related_file = open(path + ".csv", "w")
         pickle_file = open(path + ".pickle", "w")
 
+        antonyms_file = open(path + "_antonyms.csv", "w")
+        antonyms_pickle = open(path + "_antonyms.pickle", "w")
+
         vocab_writer = csv.writer(related_file, dialect='excel')
+        antonyms_writer = csv.writer(antonyms_file, dialect='excel')
         print("Exporting on_sense to related... ")
         for key, value in self.on2wn.items():
-            vocab_writer.writerow([key] + [self.get_related(key)])
-            on2related[key] = self.get_related(key)
+            _related, _antonyms = self.get_related(key)
+            # csv
+            vocab_writer.writerow([key] + [_related])
+            antonyms_writer.writerow([key] + [_antonyms])
+            # to dump pickle
+            on2related[key] = _related
+            on2antonyms[key] = _antonyms
+            if len(_antonyms) > 0:
+                with_antonyms +=1
+            else:
+                without_antonyms += 1
 
         pickle.dump(on2related, pickle_file)
+        pickle.dump(on2antonyms, antonyms_pickle)
 
-        print("Exported on_sense to related mapping.")
+        print("Exported on_sense to related mappings.")
+        print("with antonyms: ", with_antonyms)
+        print("without antonyms: ", without_antonyms)
 
 
 if __name__ == '__main__':
