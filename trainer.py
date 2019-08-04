@@ -11,7 +11,7 @@ DataLoader is based on this article:
 class DataLoader:
 
     def __init__(self):
-        s
+        pass
 
     def expand(self, x):
         """

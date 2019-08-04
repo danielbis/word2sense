@@ -109,8 +109,9 @@ class DataLoader:
         if sense not in self.on_sense2index:
             old_n_senses = self.n_senses
             self.on_sense2index[sense] = self.n_senses
-            self.word2count[sense] = 1
             self.index2on_sense[self.n_senses] = sense
+            self.on_sense2count[sense] = 1
+
             self.n_senses += 1
             return old_n_senses
         else:
@@ -247,6 +248,11 @@ def export_vocab(index2word, n_words,word2count, dicts_dir, write_pickle=True, w
 def export_sense(index2on_sense, n_senses, on_sense2count, dicts_dir, write_pickle=True):
     dict_file = open("%s/%s/csv_format/%s.csv" % (dicts_dir, "sense_vocab", "index2sense"), "w")
     wr = csv.writer(dict_file, dialect='excel')
+    print('\n########################################################\n')
+    print("Exporting senses...")
+    print("Number of unique senses: %s" % len(index2on_sense))
+    print("MAX ID: %s" % max(index2on_sense.keys()))
+
     for key, value in index2on_sense.items():
         wr.writerow((key, value))
 
@@ -259,6 +265,7 @@ def export_sense(index2on_sense, n_senses, on_sense2count, dicts_dir, write_pick
     if write_pickle:
         dict_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "sense_vocab", "index2sense"), "w")
         pickle.dump(index2on_sense, dict_file)
+
         counter_file = open("%s/%s/pickles/%s.pickle" % (dicts_dir, "sense_vocab", "sense2count"), "w")
         pickle.dump(n_senses, counter_file)
         pickle.dump(on_sense2count, counter_file)

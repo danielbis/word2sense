@@ -17,8 +17,8 @@ CORPUS_DIR = "corpus"
 def export_dicts_helper(mappings, dicts_dir,idx2token_path, token2idx_path, type, write_pickle=True):
     index2sense = dict()
 
-    dict_file_1 = open("%s/csv_format/%s.csv" % (dicts_dir+type, token2idx_path), "w")
-    dict_file_2 = open("%s/csv_format/%s.csv" % (dicts_dir+type, idx2token_path), "w")
+    dict_file_1 = open("%s/%s/csv_format/%s.csv" % (dicts_dir,type, token2idx_path), "w")
+    dict_file_2 = open("%s/%s/csv_format/%s.csv" % (dicts_dir,type, idx2token_path), "w")
     wr_1 = csv.writer(dict_file_1, dialect='excel')
     wr_2 = csv.writer(dict_file_2, dialect='excel')
 
@@ -27,9 +27,11 @@ def export_dicts_helper(mappings, dicts_dir,idx2token_path, token2idx_path, type
         wr_2.writerow((value, key))  # index2sense
         index2sense[value] = key
 
+    print("I2S: ", len(index2sense))
+    print("MAX KEY: ", max(index2sense.keys()))
     if write_pickle:
-        dict_file_1 = open("%s/%s/pickles/%s.pickle" % (dicts_dir+type, token2idx_path), "w")
-        dict_file_2 = open("%s/%s/pickles/%s.pickle" % (dicts_dir+type, idx2token_path), "w")
+        dict_file_1 = open("%s/%s/pickles/%s.pickle" % (dicts_dir,type, token2idx_path), "w")
+        dict_file_2 = open("%s/%s/pickles/%s.pickle" % (dicts_dir,type, idx2token_path), "w")
 
         pickle.dump(mappings, dict_file_1)
         pickle.dump(index2sense, dict_file_2)
@@ -64,9 +66,11 @@ def load_sense_mappings(path):
 def load_sense_mappings_pickle(path):
     mappings = pickle.load(open(path, "rb"))
     #print(mappings)
+    """
     for key, value in mappings.items():
         if len(value) == 0:
             del mappings[key]
+    """
     return mappings
 
 
@@ -101,7 +105,7 @@ class OnWnMapper:
 
         self.n_onsenses = len(self.sense2index)
         # get rid of that, no longer needed, save memory
-        del self.index2sense
+        # del self.index2sense
 
         # Vocab
         self.word2index = load_vocab(path_to_vocab)
@@ -328,12 +332,13 @@ class OnWnMapper:
         for key, value in self.on2wn.items():
             _related, _antonyms = self.get_related(key)
             # csv
-            if key in self.sense2index:
+            if key in self.sense2index.keys():
                 vocab_writer.writerow([self.sense2index[key]] + [_related])
                 antonyms_writer.writerow([self.sense2index[key]] + [_antonyms])
             else:
-                vocab_writer.writerow([self.add_onsense(key)] + [_related])
-                antonyms_writer.writerow([self.add_onsense(key)] + [_antonyms])
+                k = self.add_onsense(key)
+                vocab_writer.writerow([k] + [_related])
+                antonyms_writer.writerow([k] + [_antonyms])
 
             if len(_antonyms) > 0:
                 with_antonyms +=1
@@ -348,7 +353,6 @@ class OnWnMapper:
             on2related[self.sense2index[key]] = _related + [0 for i in range(MAX_RELATED-len(_related))]
 
             on2antonyms[self.sense2index[key]] = _antonyms + [0 for i in range(MAX_ANTONYMS-len(_antonyms))]
-
 
         pickle.dump(on2related, pickle_file)
         pickle.dump(on2antonyms, antonyms_pickle)
@@ -381,5 +385,6 @@ if __name__ == '__main__':
         "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/sense_vocab/pickles/index2sense.pickle"
     mapperObject = OnWnMapper(PATH_ON2WN_PICKLE, PATH_VOCAB, PATH_INDEX2SENSE)
     mapperObject.build_export_related(PATH_RELATED)
+    mapperObject.export_updated_dicts(_cropus_dir="corpus/")
 
 

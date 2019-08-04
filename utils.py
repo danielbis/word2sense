@@ -59,6 +59,27 @@ class Lang:
         return tf.contrib.eager.Variable(w2v)
 
 
+def load_related(path2related, max_size=128):
+    """
+      Load and pad the related words mapping
+      :param path2realted
+      :param max_size (max number of related)
+      :return: np.array, shape = [total_senses x max_size]
+    """
+    related = pickle.load(open(path2related, "rb"))
+    print("MAX: ", max(related.keys()))
+    related_matrix = np.zeros(shape=[max(related.keys())+1, max_size], dtype=np.int32)
+    print(related[34])
+
+    for key, value in related.items():
+        #print(key, value)
+        diff = range(len(value) - max_size)
+        value = value + [0 for i in diff]
+        related_matrix[key] = value
+
+    return related_matrix
+
+
 
 if __name__ == "__main__":
     vocab_path = "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/vocab/pickles/index2word.pickle"
@@ -66,11 +87,14 @@ if __name__ == "__main__":
     related_path = "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/related/relations.pickle"
     antonyms_path = "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/related/relations_antonyms.pickle"
     embeddings_path = "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/embeddings/GoogleNews-vectors-negative300.bin.gz"
-    lang = Lang(vocab_path, sense_path, related_path, antonyms_path, _embedding_size=300)
+    #lang = Lang(vocab_path, sense_path, related_path, antonyms_path, _embedding_size=300)
 
-    lang.load_gensim_word2vec(embeddings_path)
-    print(lang.gensim_word2vec["dog"])
+    #lang.load_gensim_word2vec(embeddings_path)
+    #print(lang.gensim_word2vec["dog"])
     #mbeddings = lang.create_embeddings()
     #print(tf.shape(embeddings))
+    related = load_related(related_path)
+    print(related[34])
+    print(related[0])
 
 
