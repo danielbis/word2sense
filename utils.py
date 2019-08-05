@@ -2,6 +2,7 @@ import os
 import pickle
 import gensim
 import numpy as np
+from tf_records_helper import RecordPrep
 import tensorflow as tf
 tf.enable_eager_execution()
 tf.executing_eagerly()

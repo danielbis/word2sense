@@ -45,28 +45,38 @@ class Encoder(tf.keras.Model):
 
         return outputs, h_state, c_state
 
-def get_checkpoint(encoder, optimizer):
-    checkpoint_dir = './training_checkpoints'
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-    checkpoint = tf.train.Checkpoint(optimizer=optimizer,
-                                 encoder=encoder)
-    return checkpoint, checkpoint_prefix
 
 def train(embedding_matrix,
           related_matrix,
+          dataset,
           encoder_hidden_size,
           encoder_embedding_size,
-          checkpoint,
-          checkpoint_prefix,
+          checkpoint_dir,
           _batch_size=16,
           _epochs=10,
           max_seq_len=128,
           normalize_by_related_count=True):
+    """
 
-    loader = DataLoader()
-    dataset = loader.prepare_dataset_iterators(test_data)
+    :param embedding_matrix: tensorflow variable [vocab_size x encoder_embedding_size]
+    :param related_matrix: tensorflow variable [on_senses_count x 128]
+    :param dataset: tf.data.TFRecordDataset
+    :param encoder_hidden_size: int
+    :param encoder_embedding_size: int
+    :param checkpoint_dir: str, path to checkpoints
+    :param _batch_size: int
+    :param _epochs: int
+    :param max_seq_len: int
+    :param normalize_by_related_count: Boolean, if True batch loss is divided by the total number of related words used
+        in that batch
+    :return:
+    """
+
     encoder = Encoder(encoder_hidden_size, encoder_embedding_size, _batch_size)
     optimizer = tf.train.AdamOptimizer()
+    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+    checkpoint = tf.train.Checkpoint(optimizer=optimizer,
+                                     encoder=encoder)
 
     for epoch in _epochs:
         start = time.time()  # get start of the epoch
@@ -90,7 +100,7 @@ def train(embedding_matrix,
                 _outs = tf.transpose(outputs, perm=[1, 0, 2])
                 print(_outs.shape)
 
-                for i in range(0, max_seq_len):
+                for i in range(0, encoder_input.shape[1]):
                     _loss = my_cosine(_outs[i], related_embs[i])
 
                     _loss = my_mask(related_[i], _loss, batch_size=4, max_related=2)
@@ -118,25 +128,5 @@ def train(embedding_matrix,
                                                 epoch_loss))  # could divide epoch loss by  number of batches
         print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
 
-if __name__ == "__main__":
 
-    files = os.listdir("/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/tf_records_corpus")
-    test_data = []
-    for i,f in enumerate(files):
-        test_data.append("/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/tf_records_corpus/" + f)
-        if i > 20:
-            break
-
-
-    
-    loader = DataLoader()
-    train_ds = loader.prepare_dataset_iterators(test_data)
-    #print(train_ds)
-
-    for (batch, example) in enumerate(train_ds):
-
-        if batch > 4:
-            break
-        else:
-            print(example['vocab_ids'])
 
