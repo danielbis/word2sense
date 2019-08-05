@@ -4,7 +4,7 @@ import gensim
 import numpy as np
 from tf_records_helper import RecordPrep
 import tensorflow as tf
-tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
 
 
@@ -107,10 +107,10 @@ class DataLoader:
             "length_2": 1,  # Likewise for the length of the sequence
             "vocab_ids": tf.TensorShape([None]),  # but the seqeunce is variable length, we pass that information to TF
             "sense_ids": tf.TensorShape([None])  # but the seqeunce is variable length, we pass that information to TF
-        })
+        }, drop_remainder=True)
         # Finally, we need to undo that hack from the expand function
         dataset = dataset.map(self.deflate)
-        dataset = dataset.prefetch(2)
+        dataset = dataset.prefetch(4)
         return dataset
 
 

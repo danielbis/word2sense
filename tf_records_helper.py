@@ -1,7 +1,7 @@
 import pickle
 import os
 import tensorflow as tf
-tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
 
 VOCAB_PATH = "/Users/daniel/Desktop/Research/WSD_Data/ontonotes-release-5.0/api/corpus/ids/pickles"

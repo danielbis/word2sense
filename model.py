@@ -6,7 +6,7 @@ from tf_records_helper import RecordPrep
 from utils import Lang, DataLoader, load_related
 from my_cosine import my_cosine, my_mask
 import tensorflow as tf
-tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
 
 
@@ -78,7 +78,7 @@ def train(embedding_matrix,
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                      encoder=encoder)
 
-    for epoch in _epochs:
+    for epoch in range(0,_epochs):
         start = time.time()  # get start of the epoch
         epoch_loss = tf.contrib.eager.Variable(0, dtype=tf.float32)  # get epoch loss
 
@@ -96,17 +96,22 @@ def train(embedding_matrix,
 
             with tf.GradientTape() as tape:
                 outputs, hidden, cell = encoder(encoder_input)
-                print(outputs.shape)
+                print("outputs shape: ",outputs.shape)
                 _outs = tf.transpose(outputs, perm=[1, 0, 2])
-                print(_outs.shape)
+                print("_outs shape: ", _outs.shape)
 
                 for i in range(0, encoder_input.shape[1]):
+                    print("_outs[i] shape: ", _outs[i].shape)
+                    print("related_embs[i] shape: ", related_embs[i].shape)
                     _loss = my_cosine(_outs[i], related_embs[i])
-
-                    _loss = my_mask(related_[i], _loss, batch_size=4, max_related=2)
+                    _loss = my_mask(related_[i], _loss, batch_size=_batch_size, max_related=128)
+                    print("_loss.shape: ", _loss.shape[0])
+                    denum = _loss.shape[0]
+                    if denum == 0:
+                        denum += 1
                     _loss = tf.reduce_sum(_loss)
                     if normalize_by_related_count:
-                        _loss = tf.math.divide(_loss, _loss.shape[0])
+                        _loss = tf.math.divide(_loss, tf.cast(denum, tf.float32))
                     batch_loss = tf.add(batch_loss, _loss)
 
             epoch_loss = tf.add(epoch_loss, batch_loss)

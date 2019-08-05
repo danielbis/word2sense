@@ -2,16 +2,16 @@ import os
 from utils import Lang, DataLoader, load_related
 from model import train
 import tensorflow as tf
-tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
 
 # HYPERPARAMETERS
-EPOCHS = 10
-BATCH_SIZE = 16
+EPOCHS = 5
+BATCH_SIZE = 4
 LEARNING_RATE = 0.01
 GRADIENT_CLIPPING = None
-ENCODER_HIDDEN_SIZE = 200
-EMBEDDING_SIZE = 200
+ENCODER_HIDDEN_SIZE = 300
+EMBEDDING_SIZE = 300
 MAX_SEQ_LEN = 128
 CHECKPOINT_DIR = "./training_checkpoints"
 
