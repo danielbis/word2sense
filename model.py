@@ -31,20 +31,19 @@ class Encoder(tf.keras.Model):
         if self.use_cuda:
             print("Using CUDA GPU.")
             # stateful=False by default
-            self.lstm = tf.keras.layers.CuDNNLSTM(units=self.hidden_size,
+            self.lstm = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(units=self.hidden_size,
                                                   return_sequences=True,
-                                                  return_state=True)
+                                                  return_state=True), merge_mode="concat")
         else:
             print("CUDA GPU unavailable, using CPU.")
-            self.lstm = tf.keras.layers.LSTM(units=self.hidden_size,
+            self.lstm = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(units=self.hidden_size,
                                              return_sequences=True,
-                                             return_state=True)
+                                             return_state=True), merge_mode="concat")
 
     def call(self, _input):
-        outputs, h_state, c_state = self.lstm(_input)
+        outputs, h_state_f, c_state_f, h_state_b, c_state_b = self.lstm(_input)
 
-        return outputs, h_state, c_state
-
+        return outputs, h_state_f, c_state_f, h_state_b, c_state_b
 
 def train(embedding_matrix,
           related_matrix,
@@ -95,7 +94,7 @@ def train(embedding_matrix,
             related_ = tf.transpose(related_, perm=[1, 0, 2])
 
             with tf.GradientTape() as tape:
-                outputs, hidden, cell = encoder(encoder_input)
+                outputs, hidden_f, cell_f, hidden_b, cell_b = encoder(encoder_input)
                 print("outputs shape: ",outputs.shape)
                 _outs = tf.transpose(outputs, perm=[1, 0, 2])
                 print("_outs shape: ", _outs.shape)
