@@ -2,7 +2,7 @@ from nltk.corpus import wordnet as wn
 import csv
 import re
 import pickle
-
+from utils import load_sense_mappings_pickle, load_vocab, export_dicts_helper
 """
 Questions: 
 By how much is, on average, the coarser OntoNotes grouping increasing the number of synonyms, 
@@ -12,80 +12,6 @@ antonyms, and related words in general in comparison to WN?
 
 ####################### HELPERS #######################################################################################
 CORPUS_DIR = "corpus"
-
-
-def export_dicts_helper(mappings, dicts_dir,idx2token_path, token2idx_path, type, write_pickle=True):
-    index2sense = dict()
-
-    dict_file_1 = open("%s/%s/csv_format/%s.csv" % (dicts_dir,type, token2idx_path), "w")
-    dict_file_2 = open("%s/%s/csv_format/%s.csv" % (dicts_dir,type, idx2token_path), "w")
-    wr_1 = csv.writer(dict_file_1, dialect='excel')
-    wr_2 = csv.writer(dict_file_2, dialect='excel')
-
-    for key, value in mappings.items():
-        wr_1.writerow((key, value))  # sense2index
-        wr_2.writerow((value, key))  # index2sense
-        index2sense[value] = key
-
-    print("I2S: ", len(index2sense))
-    print("MAX KEY: ", max(index2sense.keys()))
-    if write_pickle:
-        dict_file_1 = open("%s/%s/pickles/%s.pickle" % (dicts_dir,type, token2idx_path), "w")
-        dict_file_2 = open("%s/%s/pickles/%s.pickle" % (dicts_dir,type, idx2token_path), "w")
-
-        pickle.dump(mappings, dict_file_1)
-        pickle.dump(index2sense, dict_file_2)
-
-
-
-def load_sense_mappings(path):
-    mappings = {}
-    print("Loading the OntoNotes --> WordNet sense mappings... ")
-    dict_file = open(path, "r")
-    converted = 0
-    not_converted = 0
-
-    vocab_reader = csv.reader(dict_file, dialect='excel')
-    for row in vocab_reader:
-        wn_senses = []
-        for i in row[1][1:-1].split(','):  # get rid of quotation marks from csv files
-            try:
-                wn_senses.append(int(i.replace(" ", "")))  # saving the wn senses to a list
-                converted +=1
-            except ValueError as ve:  # inspecting the exceptions
-                print("Can't convert", ve)
-                print("ROW: ", row[0], row[1])
-                not_converted +=1
-
-        mappings[row[0]] = wn_senses  # create on_wn link
-    print("###############################################################################")
-    print("Done loading sense mappings, converted %s, could not convert %s." % (converted, not_converted))
-    return mappings
-
-
-def load_sense_mappings_pickle(path):
-    mappings = pickle.load(open(path, "rb"))
-    #print(mappings)
-    """
-    for key, value in mappings.items():
-        if len(value) == 0:
-            del mappings[key]
-    """
-    return mappings
-
-
-def load_vocab(path):
-    mappings = {}
-    print("Loading the word --> index vocab mappings... ")
-    dict_file = open(path, "r")
-    vocab_reader = csv.reader(dict_file, dialect='excel')
-    for row in vocab_reader:
-        mappings[row[1]] = int(row[0])  # word = index
-
-    return mappings
-
-#######################################################################################################################
-
 
 class OnWnMapper:
     def __init__(self, path_to_map, path_to_vocab, path_to_index2sense):

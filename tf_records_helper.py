@@ -77,7 +77,17 @@ class RecordPrep:
                                                                               self.sense_corpus_path + '/' + _file[1])
                 self.serialize_doc(vocab_document, sense_document, _file[0])
 
-
+    def check_if_tagged(self, seq):
+        """
+        checks if any word in the sequence is tagged with sense id.
+        If so returns True, else False.
+        :param seq: list of sense ids
+        :return:
+        """
+        for w in seq:
+            if w != 0:
+                return True
+        return False
 
     def import_document_pickles(self, vocab_corpus_path, sense_corpus_path):
 
@@ -94,9 +104,10 @@ class RecordPrep:
         with open(record_filename, 'w') as f:
             writer = tf.python_io.TFRecordWriter(f.name)
             for sentence in zip(vocab_list, sense_list):
-                # print(sentence[0], sentence[1])
-                example = self.sequence_to_tf_example(sentence[0], sentence[1])
-                writer.write(example.SerializeToString())
+                # filter out sentences without any words tagged with senses
+                if self.check_if_tagged(sentence[1]):
+                    example = self.sequence_to_tf_example(sentence[0], sentence[1])
+                    writer.write(example.SerializeToString())
 
     def read_dataset(self):
         # Read a tf record file. This makes a dataset of raw TFRecords
