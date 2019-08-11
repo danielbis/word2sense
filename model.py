@@ -40,8 +40,8 @@ class Encoder(tf.keras.Model):
                                              return_sequences=True,
                                              return_state=True), merge_mode="concat")
 
-    def call(self, _input):
-        outputs, h_state_f, c_state_f, h_state_b, c_state_b = self.lstm(_input)
+    def call(self, _input, _initial_state):
+        outputs, h_state_f, c_state_f, h_state_b, c_state_b = self.lstm(_input, initial_state=_initial_state)
 
         return outputs, h_state_f, c_state_f, h_state_b, c_state_b
 
@@ -77,6 +77,10 @@ def train(embedding_matrix,
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                      encoder=encoder)
 
+    # initial_state for Bidirectional wrapper may cause issues in TF version 1.14
+    # update to tf nightly to fix it or use TF 2.0
+    hidden_cell_zero = [tf.zeros((6, 150), dtype=tf.float32), tf.zeros((6, 150), dtype=tf.float32)]
+    lstm_state = hidden_cell_zero + hidden_cell_zero  # list of 4 x tf.zeros((6, 150), dtype=tf.float32)
     for epoch in range(0,_epochs):
         start = time.time()  # get start of the epoch
         epoch_loss = tf.contrib.eager.Variable(0, dtype=tf.float32)  # get epoch loss
@@ -94,7 +98,9 @@ def train(embedding_matrix,
             related_ = tf.transpose(related_, perm=[1, 0, 2])
 
             with tf.GradientTape() as tape:
-                outputs, hidden_f, cell_f, hidden_b, cell_b = encoder(encoder_input)
+                # f = forward, b = backward
+                outputs, hidden_f, cell_f, hidden_b, cell_b = encoder(encoder_input, lstm_state)
+                lstm_state = [hidden_f, cell_f, hidden_b, cell_b]
                 print("outputs shape: ",outputs.shape)
                 _outs = tf.transpose(outputs, perm=[1, 0, 2])
                 print("_outs shape: ", _outs.shape)
