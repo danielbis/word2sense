@@ -230,6 +230,7 @@ def validation(encoder, embedding_matrix, dataset):
         sentence1_out, s_1_layer1_state, s_1_layer2_state = encoder(encoder_input_1, None)  # None for initial state
         sentence2_out, s_2_layer1_state, s_2_layer2_state = encoder(encoder_input_2, None)
         print(batch)
+
         if sentence1_out.shape[0] != sentence2_out.shape[0]:
             raise ValueError(
                 'batch_size of sentence1 and batch_size of sentence2 are not equal : '
@@ -252,6 +253,8 @@ def validation(encoder, embedding_matrix, dataset):
         eval_cosines += batch_cosines
         eval_ratings += batch_ratings
         num_batches = batch
+        if batch == 10:
+            break
 
     rho, pvalue = spearmanr(eval_cosines, eval_ratings)
 
