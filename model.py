@@ -121,7 +121,7 @@ def train(embedding_matrix,
     """
 
     encoder = Encoder(encoder_hidden_size, encoder_embedding_size, _batch_size)
-    optimizer = tf.train.AdamOptimizer()
+    optimizer = tf.compat.v1.train.AdamOptimizer()
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                      encoder=encoder)
@@ -134,7 +134,8 @@ def train(embedding_matrix,
     # update to tf nightly to fix it or use TF 2.0
     hidden_cell_zero = [tf.zeros((_batch_size, encoder_hidden_size), dtype=tf.float32),
                         tf.zeros((_batch_size, encoder_hidden_size), dtype=tf.float32)]
-    lstm_state = hidden_cell_zero + hidden_cell_zero  # list of 4 x tf.zeros((6, 150), dtype=tf.float32)
+    # list of 2 x 4 x tf.zeros((6, 150), dtype=tf.float32)
+    lstm_state = [hidden_cell_zero + hidden_cell_zero, hidden_cell_zero + hidden_cell_zero]
     for epoch in range(0, _epochs):
         start = time.time()  # get start of the epoch
         epoch_loss = tf.contrib.eager.Variable(0, dtype=tf.float32)  # get epoch loss
@@ -226,9 +227,9 @@ def validation(encoder, embedding_matrix, dataset):
         encoder_input_1 = tf.nn.embedding_lookup(embedding_matrix, example['sentence1'])
         encoder_input_2 = tf.nn.embedding_lookup(embedding_matrix, example['sentence2'])
 
-        sentence1_out, hidden_f, cell_f, hidden_b, cell_b = encoder(encoder_input_1, None)  # None for initial state
-        sentence2_out, hidden_f, cell_f, hidden_b, cell_b = encoder(encoder_input_2, None)
-
+        sentence1_out, s_1_layer1_state, s_1_layer2_state = encoder(encoder_input_1, None)  # None for initial state
+        sentence2_out, s_2_layer1_state, s_2_layer2_state = encoder(encoder_input_2, None)
+        print(batch)
         if sentence1_out.shape[0] != sentence2_out.shape[0]:
             raise ValueError(
                 'batch_size of sentence1 and batch_size of sentence2 are not equal : '

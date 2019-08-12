@@ -34,6 +34,10 @@ class Lang:
     def get_index2word(self):
         return self.index2word
 
+    def create_temp_embeddings(self):
+        w2v = np.zeros(shape=[self.vocab_size, self.embedding_size], dtype=np.float32)
+        return tf.contrib.eager.Variable(w2v)
+
     def create_embeddings(self):
         """
         Converts gensim word2vec dictionary to TensorFlow Tensor, mapping the indices
@@ -87,14 +91,14 @@ class EvalDataLoader:
         """
         Undo Hack. We undo the expansion we did in expand
         """
-        x['idx'] = tf.squeeze(tf.convert_to_tensor(x['idx']), 0)
-        x['length1'] = tf.squeeze(tf.convert_to_tensor(x['length1']), 0)
-        x['length2'] = tf.squeeze(tf.convert_to_tensor(x['length2']), 0)
-        x['word1idx'] = tf.squeeze(tf.convert_to_tensor(x['word1idx']), 0)
-        x['word2idx'] = tf.squeeze(tf.convert_to_tensor(x['word2idx']), 0)
-        x['word1'] = tf.squeeze(tf.convert_to_tensor(x['word1']), 0)
-        x['word2'] = tf.squeeze(tf.convert_to_tensor(x['word2']), 0)
-        x['avg_rating'] = tf.squeeze(tf.convert_to_tensor(x['avg_rating']), 0)
+        x['idx'] = tf.squeeze(tf.convert_to_tensor(x['idx']))
+        x['length1'] = tf.squeeze(tf.convert_to_tensor(x['length1']))
+        x['length2'] = tf.squeeze(tf.convert_to_tensor(x['length2']))
+        x['word1idx'] = tf.squeeze(tf.convert_to_tensor(x['word1idx']))
+        x['word2idx'] = tf.squeeze(tf.convert_to_tensor(x['word2idx']))
+        x['word1'] = tf.squeeze(tf.convert_to_tensor(x['word1']))
+        x['word2'] = tf.squeeze(tf.convert_to_tensor(x['word2']))
+        x['avg_rating'] = tf.squeeze(tf.convert_to_tensor(x['avg_rating']))
 
         return x
 

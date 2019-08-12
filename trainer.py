@@ -4,6 +4,7 @@ from model import train, validation, Encoder
 import tensorflow as tf
 tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
+print(tf.__version__)
 
 #  HYPERPARAMETERS
 EPOCHS = 10
@@ -28,10 +29,11 @@ path_to_test_records = "./scws_records/test/scws_test.tfrecord"
 
 
 # Helper class
-lang = Lang(vocab_path, sense_path, related_path, antonyms_path, _embedding_size=300)
-lang.load_gensim_word2vec(embeddings_path)  # load pre-trained embeddings
+lang = Lang(vocab_path, sense_path, related_path, antonyms_path, _embedding_size=EMBEDDING_SIZE)
+#lang.load_gensim_word2vec(embeddings_path)  # load pre-trained embeddings
 # this creates TF matrix of embeddings
-embeddings_matrix = lang.create_embeddings()
+#embeddings_matrix = lang.create_embeddings()
+embeddings_matrix = lang.create_temp_embeddings()
 # this loads a matrix of on_sense -> related words mappings
 related = load_related(related_path)
 

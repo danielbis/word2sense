@@ -45,17 +45,17 @@ class RecordPrep:
         :return:
         '''
         context_features = {
-            "length_1": tf.FixedLenFeature([], dtype=tf.int64),
-            "length_2": tf.FixedLenFeature([], dtype=tf.int64)
+            "length_1": tf.io.FixedLenFeature([], dtype=tf.int64),
+            "length_2": tf.io.FixedLenFeature([], dtype=tf.int64)
         }
         sequence_features = {
-            "vocab_ids": tf.FixedLenSequenceFeature([], dtype=tf.int64),
-            "sense_ids": tf.FixedLenSequenceFeature([], dtype=tf.int64),
+            "vocab_ids": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
+            "sense_ids": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
 
         }
 
         # Parse the example (returns a dictionary of tensors)
-        context_parsed, sequence_parsed = tf.parse_single_sequence_example(
+        context_parsed, sequence_parsed = tf.io.parse_single_sequence_example(
             serialized=ex,
             context_features=context_features,
             sequence_features=sequence_features
