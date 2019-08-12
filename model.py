@@ -12,7 +12,7 @@ import logging
 tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
 
-logging.basicConfig(filename='./training.log',level=logging.INFO)
+logging.basicConfig(filename='./training.log', level=logging.INFO)
 
 
 class Encoder(tf.keras.Model):
