@@ -47,7 +47,7 @@ class Encoder(tf.keras.Model):
 
         if self.use_cuda:
             print("Using CUDA GPU.")
-            logging.INFO("Using CUDA GPU.")
+            logging.info("Using CUDA GPU.")
             # stateful=False by default
             self.lstm_layer1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(units=self.hidden_size,
                                                                                        return_sequences=True,
@@ -129,7 +129,7 @@ def train(embedding_matrix,
     rho_test, pvalue_test, avg_loss = validation(encoder, embedding_matrix=embedding_matrix, dataset=test_dataset)
 
     print("Initial Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
-    logging.INFO("Initial Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
+    logging.info("Initial Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
     # initial_state for Bidirectional wrapper may cause issues in TF version 1.14
     # update to tf nightly to fix it or use TF 2.0
     hidden_cell_zero = [tf.zeros((_batch_size, encoder_hidden_size), dtype=tf.float32),
@@ -182,7 +182,7 @@ def train(embedding_matrix,
                 print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
                                                              batch,
                                                              batch_loss.numpy()))
-                logging.INFO('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
+                logging.info('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
                                                              batch,
                                                              batch_loss.numpy()))
         # saving (checkpoint) the model every 2 epochs
@@ -191,22 +191,22 @@ def train(embedding_matrix,
 
         print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                             epoch_loss))  # could divide epoch loss by  number of batches
-        logging.INFO('Epoch {} Loss {:.4f}'.format(epoch + 1,
+        logging.info('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                             epoch_loss))
         print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
-        logging.INFO('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+        logging.info('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
 
         if epoch % 2:
             rho, pvalue, avg_loss= validation(encoder, embedding_matrix=embedding_matrix, dataset=validation_dataset)
             print("Spearman's rank correlation after Epoch {} is {:.4f}, average validation loss is {:.4f}".format(
                 epoch + 1, rho, avg_loss))
-            logging.INFO("Spearman's rank correlation after Epoch {} is {:.4f}, average validation loss is {:.4f}".format(
+            logging.info("Spearman's rank correlation after Epoch {} is {:.4f}, average validation loss is {:.4f}".format(
                 epoch + 1, rho, avg_loss))
 
     rho_test, pvalue_test, avg_loss = validation(encoder, embedding_matrix=embedding_matrix, dataset=test_dataset)
 
     print("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
-    logging.INFO("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
+    logging.info("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
 
 def validation(encoder, embedding_matrix, dataset):
     """
