@@ -23,7 +23,7 @@ sense_path = "./corpus/sense_vocab/pickles/index2sense.pickle"
 related_path = "./corpus/related/relations.pickle"
 antonyms_path = "./corpus/related/relations_antonyms.pickle"
 embeddings_path = "./corpus/embeddings/GoogleNews-vectors-negative300.bin.gz"
-path_to_tf_records = "./test_tf"
+path_to_tf_records = "./tf_records_corpus"
 path_to_valid_records = "./scws_records/valid/scws_valid.tfrecord"
 path_to_test_records = "./scws_records/test/scws_test.tfrecord"
 
