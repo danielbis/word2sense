@@ -6,3 +6,5 @@
 
 *  Words with antonyms: 1364
 *  Words without antonyms: 13073
+*  Sentences with a tagged word in OntoNotes: 81524
+*  Tagged words in OntoNotes: 293347
