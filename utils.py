@@ -62,11 +62,120 @@ class Lang:
 
 
 """
+    EvalDataLoader is based on this article: 
+    https://medium.com/@TalPerry/getting-text-into-tensorflow-with-the-dataset-api-ffb832c8bec6
+"""
+class EvalDataLoader:
+    def expand(self, x):
+        """
+        Hack. Because padded_batch doesn't play nice with scalres, so we expand the scalar  to a vector of length 1
+        :param x:
+        :return:
+        """
+        x['idx'] = tf.expand_dims(tf.convert_to_tensor(x['idx']), 0)
+        x['length1'] = tf.expand_dims(tf.convert_to_tensor(x['length1']), 0)
+        x['length2'] = tf.expand_dims(tf.convert_to_tensor(x['length2']), 0)
+        x['word1idx'] = tf.expand_dims(tf.convert_to_tensor(x['word1idx']), 0)
+        x['word2idx'] = tf.expand_dims(tf.convert_to_tensor(x['word2idx']), 0)
+        x['word1'] = tf.expand_dims(tf.convert_to_tensor(x['word1']), 0)
+        x['word2'] = tf.expand_dims(tf.convert_to_tensor(x['word2']), 0)
+        x['avg_rating'] = tf.expand_dims(tf.convert_to_tensor(x['avg_rating']), 0)
+
+        return x
+
+    def deflate(self, x):
+        """
+        Undo Hack. We undo the expansion we did in expand
+        """
+        x['idx'] = tf.squeeze(tf.convert_to_tensor(x['idx']), 0)
+        x['length1'] = tf.squeeze(tf.convert_to_tensor(x['length1']), 0)
+        x['length2'] = tf.squeeze(tf.convert_to_tensor(x['length2']), 0)
+        x['word1idx'] = tf.squeeze(tf.convert_to_tensor(x['word1idx']), 0)
+        x['word2idx'] = tf.squeeze(tf.convert_to_tensor(x['word2idx']), 0)
+        x['word1'] = tf.squeeze(tf.convert_to_tensor(x['word1']), 0)
+        x['word2'] = tf.squeeze(tf.convert_to_tensor(x['word2']), 0)
+        x['avg_rating'] = tf.squeeze(tf.convert_to_tensor(x['avg_rating']), 0)
+
+        return x
+
+    @staticmethod
+    def parse(ex):
+        """
+        Explain to TF how to go from a  serialized example back to tensors
+        :param ex: Entry from tf record
+        :return:
+        """
+        context_features = {
+            "idx": tf.io.FixedLenFeature([], dtype=tf.int64),  # example id from scws
+            "length1": tf.io.FixedLenFeature([], dtype=tf.int64),  # length of the fist sentence
+            "length2": tf.io.FixedLenFeature([], dtype=tf.int64),  # length of the second sentence
+            "word1idx": tf.io.FixedLenFeature([], dtype=tf.int64),  # word 1 position in sentence
+            "word2idx": tf.io.FixedLenFeature([], dtype=tf.int64),  # word 2 position in sentence
+            "word1": tf.io.FixedLenFeature([], dtype=tf.int64),  # word 1 id
+            "word2": tf.io.FixedLenFeature([], dtype=tf.int64),  # word 2 id
+            "avg_rating": tf.io.FixedLenFeature([], dtype=tf.float32)  # average similarity rating from scws
+        }
+        sequence_features = {
+            "sentence1": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
+            "sentence2": tf.io.FixedLenSequenceFeature([], dtype=tf.int64),
+
+        }
+
+        # Parse the example (returns a dictionary of tensors)
+        context_parsed, sequence_parsed = tf.io.parse_single_sequence_example(
+            serialized=ex,
+            context_features=context_features,
+            sequence_features=sequence_features
+        )
+        return {"idx": context_parsed["idx"], "length1": context_parsed["length1"],
+                "length2": context_parsed["length2"], "word1idx": context_parsed["word1idx"],
+                "word2idx": context_parsed["word2idx"], "word1": context_parsed["word1"],
+                "word2": context_parsed["word2"], "avg_rating": context_parsed["avg_rating"],
+                "sentence1": sequence_parsed["sentence1"], "sentence2": sequence_parsed["sentence2"]}
+
+    def make_dataset(self, file_list, batch_size=16):
+        '''
+        Makes  a Tensorflow dataset that is shuffled, batched and parsed.
+        :param file_list: The path to a tf record file
+        :param path: The size of our batch
+        :return: a Dataset that shuffles and is padded
+        '''
+        # Read a tf record file. This makes a dataset of raw TFRecords
+        dataset = tf.data.TFRecordDataset(file_list)
+        # Apply/map the parse function to every record. Now the dataset is a bunch of dictionaries of Tensors
+        dataset = dataset.map(self.parse, num_parallel_calls=2)
+        # Shuffle the dataset
+        dataset = dataset.shuffle(buffer_size=10000)
+        # In order the pad the dataset, I had to use this hack to expand scalars to vectors.
+        dataset = dataset.map(self.expand)
+        # Batch the dataset so that we get batch_size examples in each batch.
+        # Remember each item in the dataset is a dict of tensors, we need to specify padding for each tensor seperatly
+        dataset = dataset.padded_batch(batch_size, padded_shapes={
+
+            "idx": 1,  # book_id is a scalar it doesn't need any padding, its always length one
+            "length1": 1,  # Likewise for the length of the sequence
+            "length2": 1,
+            "word1idx": 1,
+            "word2idx": 1,
+            "word1": 1,
+            "word2": 1,
+            "avg_rating": 1,
+            "sentence1": tf.TensorShape([None]),  # but the seqeunce is variable length, we pass that information to TF
+            "sentence2": tf.TensorShape([None])  # but the seqeunce is variable length, we pass that information to TF
+        }, drop_remainder=True)
+        # Finally, we need to undo that hack from the expand function
+        dataset = dataset.map(self.deflate)
+        dataset = dataset.prefetch(4)
+        return dataset
+
+
+##############################################################################################################
+"""
 DataLoader is based on this article: 
     https://medium.com/@TalPerry/getting-text-into-tensorflow-with-the-dataset-api-ffb832c8bec6
 """
-class DataLoader:
 
+class DataLoader:
     def expand(self, x):
         """
         Hack. Because padded_batch doesn't play nice with scalres, so we expand the scalar  to a vector of length 1
@@ -77,7 +186,7 @@ class DataLoader:
         x['length_2'] = tf.expand_dims(tf.convert_to_tensor(x['length_2']), 0)
         return x
 
-    def deflate(self,x):
+    def deflate(self, x):
         """
         Undo Hack. We undo the expansion we did in expand
         """
@@ -116,28 +225,28 @@ class DataLoader:
 
 
 
-    def prepare_dataset_iterators(self, file_list, batch_size=4):
-        """
+def prepare_dataset_iterators(self, file_list, batch_size=4):
+    """
 
-        :param path_to_records: path to TF Records directory
-        :param batch_size:
-        :return:
-        """
-        # Make a dataset from the train data
-        train_ds = self.make_dataset(file_list, batch_size=batch_size)
-        # make a dataset from the valdiation data
-        #val_ds = make_dataset('./val.tfrecord', batch_size=batch_size)
-        # Define an abstract iterator
-        # Make an iterator object that has the shape and type of our datasets
-        #iterator = tf.data.Iterator.from_structure(train_ds.output_types,
-        #                                           train_ds.output_shapes)
+    :param path_to_records: path to TF Records directory
+    :param batch_size:
+    :return:
+    """
+    # Make a dataset from the train data
+    train_ds = self.make_dataset(file_list, batch_size=batch_size)
+    # make a dataset from the valdiation data
+    #val_ds = make_dataset('./val.tfrecord', batch_size=batch_size)
+    # Define an abstract iterator
+    # Make an iterator object that has the shape and type of our datasets
+    #iterator = tf.data.Iterator.from_structure(train_ds.output_types,
+    #                                           train_ds.output_shapes)
 
-        # This is an op that gets the next element from the iterator
-        #next_element = iterator.get_next()
-        # These ops let us switch and reinitialize every time we finish an epoch
-        #training_init_op = iterator.make_initializer(train_ds)
+    # This is an op that gets the next element from the iterator
+    #next_element = iterator.get_next()
+    # These ops let us switch and reinitialize every time we finish an epoch
+    #training_init_op = iterator.make_initializer(train_ds)
 
-        return train_ds
+    return train_ds
 
 
 def load_related(path2related, max_size=128):
@@ -160,6 +269,7 @@ def load_related(path2related, max_size=128):
 
     return related_matrix
 
+
 def export_dicts_helper(mappings, dicts_dir,idx2token_path, token2idx_path, type, write_pickle=True):
     index2sense = dict()
 
@@ -181,7 +291,6 @@ def export_dicts_helper(mappings, dicts_dir,idx2token_path, token2idx_path, type
 
         pickle.dump(mappings, dict_file_1)
         pickle.dump(index2sense, dict_file_2)
-
 
 
 def load_sense_mappings(path):

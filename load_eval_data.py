@@ -22,17 +22,6 @@ class EvalDataLoader:
 
         print(len(self.word2index))
 
-    def add_word(self, word):
-        """
-        Helper for building the dictionary
-        :param word: string
-        :return: int(id) for the word
-        """
-        old_n_words = self.n_words
-        self.word2index[word] = self.n_words
-        self.n_words += 1
-        return old_n_words
-
     @staticmethod
     def parse_eval_data(path_to_data):
         """
@@ -68,7 +57,7 @@ class EvalDataLoader:
             seq2 = _split[6].split(" ")
 
             for i, w in enumerate(seq1):
-                if w == example['word1'] and seq1[i-1] == "<b>":
+                if w == example['word1'] and seq1[i - 1] == "<b>":
                     # position in the sentence
                     example["word1idx"] = i - 1  # we are about to remove <b> and </b>
                     break
@@ -76,7 +65,7 @@ class EvalDataLoader:
             seq1.remove('</b>')
 
             for i, w in enumerate(seq2):
-                if w == example['word2'] and seq2[i-1] == "<b>":
+                if w == example['word2'] and seq2[i - 1] == "<b>":
                     # position in the sentence
                     example["word2idx"] = i - 1  # we are about to remove <b> and </b>
                     break
@@ -89,6 +78,17 @@ class EvalDataLoader:
             examples.append(example)
 
         return examples
+
+    def add_word(self, word):
+        """
+        Helper for building the dictionary
+        :param word: string
+        :return: int(id) for the word
+        """
+        old_n_words = self.n_words
+        self.word2index[word] = self.n_words
+        self.n_words += 1
+        return old_n_words
 
     def sequence_to_tf_example(self, example):
         """
@@ -113,38 +113,40 @@ class EvalDataLoader:
         not_found = 0
         sequence_1 = []
         sequence_2 = []
-        for word in example['sentence1']:
+        ex.context.feature["idx"].int64_list.value.append(example["idx"])
+
+        for word in example["sentence1"]:
             try:
                 sequence_1.append(self.word2index[word])
-            except KeyError as ke:
+            except KeyError:
                 sequence_1.append(self.add_word(word))
 
-        for word in example['sentence2']:
+        for word in example["sentence2"]:
             try:
                 sequence_2.append(self.word2index[word])
-            except KeyError as ke:
+            except KeyError:
                 sequence_2.append(self.add_word(word))
-        try:
-            ex.context.feature["word1"].int64_list.value.append(self.word2index[example['word1']])
-        except KeyError:
-            ex.context.feature["word1"].int64_list.value.append(self.add_word(example['word1']))
-        try:
-            ex.context.feature["word2"].int64_list.value.append(self.word2index[example['word2']])
-        except KeyError:
-            ex.context.feature["word2"].int64_list.value.append(self.add_word(example['word2']))
 
         sequence_length_1 = len(sequence_1)  # list of word ids
         sequence_length_2 = len(sequence_2)  # list of sense ids
         # example id
-        ex.context.feature["idx"].int64_list.value.append(example['idx'])
 
         ex.context.feature["length1"].int64_list.value.append(sequence_length_1)
         ex.context.feature["length2"].int64_list.value.append(sequence_length_2)
         # position in the sentence
-        ex.context.feature["word1idx"].int64_list.value.append(example['word1idx'])
-        ex.context.feature["word2idx"].int64_list.value.append(example['word2idx'])
+        ex.context.feature["word1idx"].int64_list.value.append(example["word1idx"])
+        ex.context.feature["word2idx"].int64_list.value.append(example["word2idx"])
 
-        ex.context.feature["avg_rating"].float_list.value.append(example['avg_rating'])
+        try:
+            ex.context.feature["word1"].int64_list.value.append(self.word2index[example["word1"]])
+        except KeyError:
+            ex.context.feature["word1"].int64_list.value.append(self.add_word(example["word1"]))
+        try:
+            ex.context.feature["word2"].int64_list.value.append(self.word2index[example["word2"]])
+        except KeyError:
+            ex.context.feature["word2"].int64_list.value.append(self.add_word(example["word2"]))
+
+        ex.context.feature["avg_rating"].float_list.value.append(example["avg_rating"])
 
         # Feature lists for the two sequential features of our example
         fl_tokens_1 = ex.feature_lists.feature_list["sentence1"]
@@ -163,8 +165,8 @@ class EvalDataLoader:
         Exports the dataset to tf records.
         :return:
         """
-        valid_record_filename = 'scws_records/scvs_valid.tfrecord'
-        test_record_filename = 'scws_records/scvs_test.tfrecord'
+        valid_record_filename = 'scws_records/valid/scws_valid.tfrecord'
+        test_record_filename = 'scws_records/test/scws_test.tfrecord'
 
         test_record = open(test_record_filename, 'w')
         valid_record = open(valid_record_filename, 'w')

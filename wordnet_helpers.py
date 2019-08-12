@@ -13,6 +13,7 @@ antonyms, and related words in general in comparison to WN?
 ####################### HELPERS #######################################################################################
 CORPUS_DIR = "corpus"
 
+
 class OnWnMapper:
     def __init__(self, path_to_map, path_to_vocab, path_to_index2sense):
         """
