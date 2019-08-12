@@ -5,9 +5,9 @@ import tensorflow as tf
 tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
 
-# HYPERPARAMETERS
-EPOCHS = 5
-BATCH_SIZE = 4
+#  HYPERPARAMETERS
+EPOCHS = 10
+BATCH_SIZE = 16
 LEARNING_RATE = 0.01
 GRADIENT_CLIPPING = None
 ENCODER_HIDDEN_SIZE = 150
@@ -37,15 +37,18 @@ related = load_related(related_path)
 
 # load tf_records
 tf_records_files = [f for f in os.listdir(path_to_tf_records) if f[0] != "."]
-#data_loader = DataLoader()
-#dataset = data_loader.make_dataset(tf_records_files, batch_size= BATCH_SIZE)
+data_loader = DataLoader()
+dataset = data_loader.make_dataset(tf_records_files, batch_size= BATCH_SIZE)
 eval_data_loader = EvalDataLoader()
-test_dataset = eval_data_loader.make_dataset([path_to_test_records], batch_size=1)
+validation_dataset = eval_data_loader.make_dataset([path_to_valid_records], batch_size=BATCH_SIZE)
+test_dataset = eval_data_loader.make_dataset([path_to_test_records], batch_size=BATCH_SIZE)
 
-"""
+
 train(embedding_matrix=embeddings_matrix,
       related_matrix=related,
       dataset=dataset,
+      validation_dataset=validation_dataset,
+      test_dataset=test_dataset,
       encoder_hidden_size=ENCODER_HIDDEN_SIZE,
       encoder_embedding_size=EMBEDDING_SIZE,
       checkpoint_dir=CHECKPOINT_DIR,
@@ -53,8 +56,10 @@ train(embedding_matrix=embeddings_matrix,
       _epochs=EPOCHS,
       max_seq_len=MAX_SEQ_LEN,
       normalize_by_related_count=True)
+
 """
 encoder = Encoder(ENCODER_HIDDEN_SIZE, EMBEDDING_SIZE, 4)
 rho, pvalue = validation(encoder=encoder, embedding_matrix=embeddings_matrix, dataset=test_dataset)
 print("RHO: ", rho)
 print("PVALUE: ", pvalue)
+"""

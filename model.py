@@ -8,9 +8,11 @@ from tf_records_helper import RecordPrep
 from utils import Lang, DataLoader, load_related
 from my_cosine import my_cosine, my_mask
 import tensorflow as tf
-
+import logging
 tf.compat.v1.enable_eager_execution()
 tf.executing_eagerly()
+
+logging.basicConfig(filename='./training.log',level=logging.INFO)
 
 
 class Encoder(tf.keras.Model):
@@ -45,13 +47,20 @@ class Encoder(tf.keras.Model):
 
         if self.use_cuda:
             print("Using CUDA GPU.")
+            logging.INFO("Using CUDA GPU.")
             # stateful=False by default
             self.lstm_layer1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(units=self.hidden_size,
                                                                                        return_sequences=True,
                                                                                        return_state=True),
                                                                                        merge_mode="concat")
+            self.lstm_layer2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(units=self.hidden_size,
+                                                                                       return_sequences=True,
+                                                                                       return_state=True),
+                                                                                       merge_mode="concat")
         else:
             print("CUDA GPU unavailable, using CPU.")
+            logging.info("CUDA GPU unavailable, using CPU.")
+
             self.lstm_layer1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(units=self.hidden_size,
                                                                                   return_sequences=True,
                                                                                   return_state=True),
@@ -68,6 +77,10 @@ class Encoder(tf.keras.Model):
         :param _initial_state:
         :return: output of layer two, layer1 cell state list, layer2 cell state list
         """
+
+        if _initial_states is None:
+            _initial_states = [self.initial_state_layer_1, self.initial_state_layer_2]
+
         outputs_1, h_state_f_1, c_state_f_1, h_state_b_1, c_state_b_1 = self.lstm_layer1(_input,
                                                                                     initial_state=_initial_states[0])
 
@@ -82,6 +95,7 @@ def train(embedding_matrix,
           related_matrix,
           dataset,
           validation_dataset,
+          test_dataset,
           encoder_hidden_size,
           encoder_embedding_size,
           checkpoint_dir,
@@ -112,9 +126,14 @@ def train(embedding_matrix,
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                      encoder=encoder)
 
+    rho_test, pvalue_test, avg_loss = validation(encoder, embedding_matrix=embedding_matrix, dataset=test_dataset)
+
+    print("Initial Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
+    logging.INFO("Initial Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
     # initial_state for Bidirectional wrapper may cause issues in TF version 1.14
     # update to tf nightly to fix it or use TF 2.0
-    hidden_cell_zero = [tf.zeros((6, 150), dtype=tf.float32), tf.zeros((6, 150), dtype=tf.float32)]
+    hidden_cell_zero = [tf.zeros((_batch_size, encoder_hidden_size), dtype=tf.float32),
+                        tf.zeros((_batch_size, encoder_hidden_size), dtype=tf.float32)]
     lstm_state = hidden_cell_zero + hidden_cell_zero  # list of 4 x tf.zeros((6, 150), dtype=tf.float32)
     for epoch in range(0, _epochs):
         start = time.time()  # get start of the epoch
@@ -136,16 +155,11 @@ def train(embedding_matrix,
                 # f = forward, b = backward
                 outputs, layer1_state, layer2_state = encoder(encoder_input, lstm_state)
                 lstm_state = [layer1_state, layer2_state]
-                print("outputs shape: ", outputs.shape)
                 _outs = tf.transpose(outputs, perm=[1, 0, 2])
-                print("_outs shape: ", _outs.shape)
 
                 for i in range(0, encoder_input.shape[1]):
-                    print("_outs[i] shape: ", _outs[i].shape)
-                    print("related_embs[i] shape: ", related_embs[i].shape)
                     _loss = my_cosine(_outs[i], related_embs[i])
                     _loss = my_mask(related_[i], _loss, batch_size=_batch_size, max_related=128)
-                    print("_loss.shape: ", _loss.shape[0])
                     # mask function flattens the output, so shape[0] is the total number of related words
                     # used for cosine loss calculations in that step
                     denum = _loss.shape[0]
@@ -167,18 +181,31 @@ def train(embedding_matrix,
                 print('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
                                                              batch,
                                                              batch_loss.numpy()))
+                logging.INFO('Epoch {} Batch {} Loss {:.4f}'.format(epoch + 1,
+                                                             batch,
+                                                             batch_loss.numpy()))
         # saving (checkpoint) the model every 2 epochs
         if (epoch + 1) % 2 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
 
         print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                             epoch_loss))  # could divide epoch loss by  number of batches
+        logging.INFO('Epoch {} Loss {:.4f}'.format(epoch + 1,
+                                            epoch_loss))
         print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+        logging.INFO('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
 
         if epoch % 2:
-            rho, pvalue = validation(encoder, embedding_matrix=embedding_matrix, dataset=validation_dataset)
-            print("Spearman's rank correlation after Epoch {} is {:.4f}".format(epoch + 1, rho))
+            rho, pvalue, avg_loss= validation(encoder, embedding_matrix=embedding_matrix, dataset=validation_dataset)
+            print("Spearman's rank correlation after Epoch {} is {:.4f}, average validation loss is {:.4f}".format(
+                epoch + 1, rho, avg_loss))
+            logging.INFO("Spearman's rank correlation after Epoch {} is {:.4f}, average validation loss is {:.4f}".format(
+                epoch + 1, rho, avg_loss))
 
+    rho_test, pvalue_test, avg_loss = validation(encoder, embedding_matrix=embedding_matrix, dataset=test_dataset)
+
+    print("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
+    logging.INFO("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
 
 def validation(encoder, embedding_matrix, dataset):
     """
@@ -225,7 +252,6 @@ def validation(encoder, embedding_matrix, dataset):
         eval_ratings += batch_ratings
         num_batches = batch
 
-    print(np.sum(eval_cosines) / num_batches)
     rho, pvalue = spearmanr(eval_cosines, eval_ratings)
 
-    return rho, pvalue
+    return rho, pvalue, np.sum(eval_cosines) / num_batches
