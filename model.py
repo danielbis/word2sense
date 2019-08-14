@@ -102,6 +102,7 @@ def train(embedding_matrix,
           test_dataset,
           encoder_hidden_size,
           encoder_embedding_size,
+          _learning_rate,
           checkpoint_dir,
           _batch_size=16,
           _epochs=10,
@@ -125,7 +126,7 @@ def train(embedding_matrix,
     """
 
     encoder = Encoder(encoder_hidden_size, encoder_embedding_size, _batch_size)
-    optimizer = tf.compat.v1.train.AdamOptimizer()
+    optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=_learning_rate)
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                      encoder=encoder)
@@ -193,6 +194,7 @@ def train(embedding_matrix,
         if (epoch + 1) % 2 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
 
+
         print('Epoch {} Loss {:.4f}'.format(epoch + 1,
                                             epoch_loss))  # could divide epoch loss by  number of batches
         logger.info('Epoch {} Loss {:.4f}'.format(epoch + 1,
@@ -206,9 +208,16 @@ def train(embedding_matrix,
                 epoch + 1, rho, avg_loss))
             logger.info("Spearman's rank correlation after Epoch {} is {:.4f}, average validation loss is {:.4f}".format(
                 epoch + 1, rho, avg_loss))
+        if (epoch + 1) % 5 == 0:
+            rho_test, pvalue_test, avg_loss = validation(encoder, embedding_matrix=embedding_matrix,
+                                                         dataset=test_dataset)
+
+            print("Epoch {} Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(epoch, rho_test,
+                                                                                                       avg_loss))
+            logger.info("Epoch {} Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(
+                epoch, rho_test, avg_loss))
 
     rho_test, pvalue_test, avg_loss = validation(encoder, embedding_matrix=embedding_matrix, dataset=test_dataset)
-
     print("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
     logger.info("Final Spearman's rank correlation is {:.4f}, average test loss is {:.4f}".format(rho_test, avg_loss))
 

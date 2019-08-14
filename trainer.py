@@ -14,7 +14,7 @@ GRADIENT_CLIPPING = None
 ENCODER_HIDDEN_SIZE = 150
 EMBEDDING_SIZE = 300
 MAX_SEQ_LEN = 128
-CHECKPOINT_DIR = "./training_checkpoints"
+CHECKPOINT_DIR = "./training_checkpoint2"
 
 
 # Paths to data
@@ -53,6 +53,7 @@ train(embedding_matrix=embeddings_matrix,
       test_dataset=test_dataset,
       encoder_hidden_size=ENCODER_HIDDEN_SIZE,
       encoder_embedding_size=EMBEDDING_SIZE,
+      _learning_rate=LEARNING_RATE,
       checkpoint_dir=CHECKPOINT_DIR,
       _batch_size=BATCH_SIZE,
       _epochs=EPOCHS,
